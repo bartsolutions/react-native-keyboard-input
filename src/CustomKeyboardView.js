@@ -16,20 +16,22 @@ export default class CustomKeyboardView extends Component {
     initialProps: PropTypes.object,
     component: PropTypes.string,
     onItemSelected: PropTypes.func,
+    useSafeArea: PropTypes.bool,
   };
   static defaultProps = {
     initialProps: {},
+    useSafeArea: true,
   };
 
   constructor(props) {
     super(props);
 
-    const {inputRef, component, initialProps, onItemSelected} = props;
+    const {inputRef, component, initialProps, onItemSelected, useSafeArea} = props;
     if (component) {
       this.addOnItemSelectListener(onItemSelected, component);
 
       if (TextInputKeyboardManagerIOS && inputRef) {
-        TextInputKeyboardManagerIOS.setInputComponent(inputRef, {component, initialProps});
+        TextInputKeyboardManagerIOS.setInputComponent(inputRef, {component, initialProps, useSafeArea});
       }
 
       this.registeredRequestShowKeyboard = false;
@@ -43,36 +45,12 @@ export default class CustomKeyboardView extends Component {
             this.keyboardExpandedToggle[args.keyboardId] = false;
           }
           this.keyboardExpandedToggle[args.keyboardId] = !this.keyboardExpandedToggle[args.keyboardId];
-          TextInputKeyboardManagerIOS.toggleExpandKeyboard(this.props.inputRef, this.keyboardExpandedToggle[args.keyboardId], this.props.initialProps.expandWithLayoutAnimation);
+          TextInputKeyboardManagerIOS.toggleExpandKeyboard(
+            this.props.inputRef, this.keyboardExpandedToggle[args.keyboardId], this.props.initialProps.expandWithLayoutAnimation,
+          );
         }
       });
     }
-  }
-
-  async componentWillReceiveProps(nextProps) {
-    const {inputRef, component, initialProps, onRequestShowKeyboard} = nextProps;
-
-    if (IsAndroid) {
-      if (this.props.component !== component && !component) {
-        await TextInputKeyboardManagerAndroid.reset();
-      }
-    }
-
-    if (IsIOS && TextInputKeyboardManagerIOS && inputRef && component !== this.props.component) {
-      if (component) {
-        TextInputKeyboardManagerIOS.setInputComponent(inputRef, {component, initialProps});
-      } else {
-        TextInputKeyboardManagerIOS.removeInputComponent(inputRef);
-      }
-    }
-
-    if (onRequestShowKeyboard && !this.registeredRequestShowKeyboard) {
-      this.registeredRequestShowKeyboard = true;
-      KeyboardRegistry.addListener('onRequestShowKeyboard', (args) => {
-        onRequestShowKeyboard(args.keyboardId);
-      });
-    }
-    this.registerListener(this.props, nextProps);
   }
 
   shouldComponentUpdate(nextProps) {
@@ -97,6 +75,36 @@ export default class CustomKeyboardView extends Component {
         onItemSelected(component, args);
       });
     }
+  }
+
+  async UNSAFE_componentWillReceiveProps(nextProps) { //eslint-disable-line
+    const {inputRef, component, initialProps, onRequestShowKeyboard, useSafeArea} = nextProps;
+
+    if (IsAndroid) {
+      if (this.props.component !== component && !component) {
+        await TextInputKeyboardManagerAndroid.reset();
+      }
+    }
+
+    if (IsIOS && TextInputKeyboardManagerIOS && inputRef && component !== this.props.component) {
+      if (component) {
+        TextInputKeyboardManagerIOS.setInputComponent(inputRef, {
+          component,
+          initialProps,
+          useSafeArea,
+        });
+      } else {
+        TextInputKeyboardManagerIOS.removeInputComponent(inputRef);
+      }
+    }
+
+    if (onRequestShowKeyboard && !this.registeredRequestShowKeyboard) {
+      this.registeredRequestShowKeyboard = true;
+      KeyboardRegistry.addListener('onRequestShowKeyboard', (args) => {
+        onRequestShowKeyboard(args.keyboardId);
+      });
+    }
+    this.registerListener(this.props, nextProps);
   }
 
   registerListener(props, nextProps) {

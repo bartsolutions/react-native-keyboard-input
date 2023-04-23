@@ -24,6 +24,7 @@ export default class KeyboardAccessoryView extends Component {
     requiresSameParentToManageScrollView: PropTypes.bool,
     addBottomView: PropTypes.bool,
     allowHitsOutsideBounds: PropTypes.bool,
+    useSafeArea: PropTypes.bool,
   };
   static defaultProps = {
     iOSScrollBehavior: -1,
@@ -62,12 +63,27 @@ export default class KeyboardAccessoryView extends Component {
     }
   }
 
+  onAndroidBackPressed() {
+    if (this.props.kbComponent) {
+      KeyboardUtils.dismiss();
+      return true;
+    }
+    return false;
+  }
+
   getIOSTrackingScrollBehavior() {
     let scrollBehavior = this.props.iOSScrollBehavior;
     if (IsIOS && NativeModules.KeyboardTrackingViewManager && scrollBehavior === -1) {
       scrollBehavior = NativeModules.KeyboardTrackingViewManager.KeyboardTrackingScrollBehaviorFixedOffset;
     }
     return scrollBehavior;
+  }
+
+  async getNativeProps() {
+    if (this.trackingViewRef) {
+      return await this.trackingViewRef.getNativeProps();
+    }
+    return {};
   }
 
   registerForKeyboardResignedEvent() {
@@ -95,14 +111,6 @@ export default class KeyboardAccessoryView extends Component {
     }
   }
 
-  onAndroidBackPressed() {
-    if (this.props.kbComponent) {
-      KeyboardUtils.dismiss();
-      return true;
-    }
-    return false;
-  }
-
   processInitialProps() {
     if (IsIOS && this.props.kbInitialProps && this.props.kbInitialProps.backgroundColor) {
       const processedProps = Object.assign({}, this.props.kbInitialProps);
@@ -110,13 +118,6 @@ export default class KeyboardAccessoryView extends Component {
       return processedProps;
     }
     return this.props.kbInitialProps;
-  }
-
-  async getNativeProps() {
-    if (this.trackingViewRef) {
-      return await this.trackingViewRef.getNativeProps();
-    }
-    return {};
   }
 
   scrollToStart() {
@@ -145,6 +146,7 @@ export default class KeyboardAccessoryView extends Component {
           initialProps={this.processInitialProps()}
           onItemSelected={this.props.onItemSelected}
           onRequestShowKeyboard={this.props.onRequestShowKeyboard}
+          useSafeArea={this.props.useSafeArea}
         />
       </KeyboardTrackingView>
     );

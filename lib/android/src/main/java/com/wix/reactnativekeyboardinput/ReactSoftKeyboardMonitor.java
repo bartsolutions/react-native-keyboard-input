@@ -1,8 +1,10 @@
 package com.wix.reactnativekeyboardinput;
 
 import android.graphics.Rect;
-import android.support.annotation.Nullable;
 import android.view.ViewTreeObserver;
+import android.view.Window;
+
+import androidx.annotation.Nullable;
 
 import com.facebook.react.ReactRootView;
 import com.wix.reactnativekeyboardinput.utils.Logger;
@@ -22,12 +24,15 @@ public class ReactSoftKeyboardMonitor implements ReactScreenMonitor.Listener {
         @Override
         public void onGlobalLayout() {
             Integer viewportVisibleHeight = getViewportVisibleHeight();
-            if (viewportVisibleHeight.equals(mLastViewportVisibleHeight)) {
+            if (viewportVisibleHeight == null || viewportVisibleHeight.equals(mLastViewportVisibleHeight)) {
                 return;
             }
-            mLastViewportVisibleHeight = viewportVisibleHeight;
 
-            if (viewportVisibleHeight < mMaxViewportVisibleHeight) {
+            mLastViewportVisibleHeight = viewportVisibleHeight;
+            if (mMaxViewportVisibleHeight == null) {
+                mMaxViewportVisibleHeight = viewportVisibleHeight;
+                Logger.d(TAG, "mMaxViewportVisibleHeight WAS NULL, now is: " + mMaxViewportVisibleHeight);
+            } else if (viewportVisibleHeight < mMaxViewportVisibleHeight) {
                 mExternalListener.onSoftKeyboardVisible(!mSoftKeyboardUp);
                 refreshKeyboardHeight();
                 mSoftKeyboardUp = true;
@@ -45,7 +50,7 @@ public class ReactSoftKeyboardMonitor implements ReactScreenMonitor.Listener {
      * root-view height normally remains unaffected during immediate layout. We therefore keep the maximal view-port size so we could
      * concurrently compare heights in each layout.
      */
-    private int mMaxViewportVisibleHeight;
+    private Integer mMaxViewportVisibleHeight;
 
     private Integer mLastViewportVisibleHeight;
 
@@ -53,7 +58,7 @@ public class ReactSoftKeyboardMonitor implements ReactScreenMonitor.Listener {
      * Soft-keyboard *height* (when visible) is deduced by the effect on the root react-view height. This is ineffective in trying to
      * monitor keyboard appearance -- only for height measuring.
      */
-    private int mLocallyVisibleHeight;
+    private Integer mLocallyVisibleHeight;
 
     private boolean mSoftKeyboardUp;
     private Integer mKeyboardHeight;
@@ -87,7 +92,12 @@ public class ReactSoftKeyboardMonitor implements ReactScreenMonitor.Listener {
             return mKeyboardHeight;
         }
 
-        return (int) (.5f * mLocallyVisibleHeight);
+        if (mLocallyVisibleHeight != null) {
+            return (int) (.5f * mLocallyVisibleHeight);
+        }
+
+        Logger.d(TAG, "getKeyboardHeight, no keyboard height");
+        return null;
     }
 
     private void registerReactRootViewLayoutListener() {
@@ -128,17 +138,30 @@ public class ReactSoftKeyboardMonitor implements ReactScreenMonitor.Listener {
                     return;
                 }
 
-                if (mLocallyVisibleHeight > locallyVisibleHeight) {
+                if (mLocallyVisibleHeight == null) {
+                    mLocallyVisibleHeight = locallyVisibleHeight;
+                    mKeyboardHeight = mLocallyVisibleHeight;
+                    Logger.d(TAG, "mLocallyVisibleHeight WAS NULL, now is: " + mLocallyVisibleHeight);
+                } else if (mLocallyVisibleHeight > locallyVisibleHeight) {
                     mKeyboardHeight = mLocallyVisibleHeight - locallyVisibleHeight;
+                } else {
+                    mKeyboardHeight = locallyVisibleHeight;
+                    Logger.d(TAG, "mKeyboardHeight = " + mKeyboardHeight + " mLocallyVisibleHeight = " + mLocallyVisibleHeight + " locallyVisibleHeight = " + locallyVisibleHeight);
                 }
             }
         });
     }
 
-    private int getViewportVisibleHeight() {
+    private Integer getViewportVisibleHeight() {
+        Integer visibleHeight = null;
         final Rect visibleArea = new Rect();
-        getWindow().getDecorView().getWindowVisibleDisplayFrame(visibleArea);
-        return visibleArea.height();
+        Window window = getWindow();
+        if (window != null) {
+            window.getDecorView().getWindowVisibleDisplayFrame(visibleArea);
+            visibleHeight = visibleArea.height();
+        }
+
+        return visibleHeight;
     }
 
     private Integer getLocallyVisibleHeight() {
