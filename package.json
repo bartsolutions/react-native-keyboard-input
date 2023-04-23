@@ -37,8 +37,8 @@
     "react-native-keyboard-tracking-view": "^5.5.0"
   },
   "peerDependencies": {
-    "react": "16.9.0",
-    "react-native": "0.61.4"
+    "react": "^16.9.0",
+    "react-native": "^0.61.4"
   },
   "devDependencies": {
     "@babel/core": "7.7.2",
